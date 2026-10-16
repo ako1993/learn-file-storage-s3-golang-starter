@@ -1,10 +1,12 @@
 package main
 
 import (
-	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/auth"
 	"github.com/google/uuid"
@@ -51,9 +53,24 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		respondWithError(w, http.StatusUnauthorized, "User ID does not match", err)
 		return
 	}
-	image_data := base64.StdEncoding.EncodeToString(data)
-	data_url := fmt.Sprintf("data:%v;base64,%v", media_type, image_data)
-	video.ThumbnailURL = &data_url
+	thumbnail_extension := strings.TrimPrefix(media_type, "image/")
+	id_and_extension := fmt.Sprintf("%v.%v", video.ID.String(), thumbnail_extension)
+	full_url := filepath.Join(cfg.assetsRoot, id_and_extension)
+	new_file, err := os.Create(full_url)
+	if err != nil {
+		fmt.Printf("Error creating file:%v", err)
+		return
+	}
+	data_string := string(data)
+	reader := strings.NewReader(data_string)
+	_, err = io.Copy(new_file, reader)
+	if err != nil {
+		fmt.Printf("Could not copy data to file:%v", err)
+		return
+	}
+	first_half := fmt.Sprintf("http://localhost:%v", cfg.port)
+	thumbnail_url := fmt.Sprintf("%v/%v", first_half, full_url)
+	video.ThumbnailURL = &thumbnail_url
 	err = cfg.db.UpdateVideo(video)
 	if err != nil {
 		fmt.Printf("Could not update thumbnail URL in Database:%v", err)
