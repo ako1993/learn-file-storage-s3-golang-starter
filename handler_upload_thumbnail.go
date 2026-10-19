@@ -46,7 +46,7 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	media_type := header.Header.Get("Content-Type")
 	media_type_, _, err := mime.ParseMediaType(media_type)
 	fmt.Println(media_type_)
-	if media_type_ != "image/jpeg" || media_type_ != "image/png" {
+	if media_type_ != "image/jpeg" && media_type_ != "image/png" {
 		respondWithError(w, 401, "Wrong type!", err)
 		return
 	}
