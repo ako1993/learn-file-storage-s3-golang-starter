@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"fmt"
 	"io"
 	"mime"
@@ -61,7 +62,9 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	thumbnail_extension := strings.TrimPrefix(media_type, "image/")
-	id_and_extension := fmt.Sprintf("%v.%v", video.ID.String(), thumbnail_extension)
+	key := make([]byte, 32)
+	rand.Read(key)
+	id_and_extension := fmt.Sprintf("%v.%v", key, thumbnail_extension)
 	full_url := filepath.Join(cfg.assetsRoot, id_and_extension)
 	new_file, err := os.Create(full_url)
 	if err != nil {
