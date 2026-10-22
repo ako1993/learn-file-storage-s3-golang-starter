@@ -65,6 +65,20 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		fmt.Printf("Could not copy video to temp file:%v", err)
 		return
 	}
+	aspect_ratio, err := getVideoAspectRatio(f.Name())
+	if err != nil {
+		fmt.Printf("Could not get video aspect ratio after saving to disk:%v", err)
+		return
+	}
+	var prefix string
+	if aspect_ratio == "16:9" {
+		prefix = "landscape"
+	} else if aspect_ratio == "9:16" {
+		prefix = "portrait"
+	} else {
+		prefix = "other"
+	}
+	fmt.Printf("HERE IS THE ASPECT RATIO: %v\n", aspect_ratio)
 	_, err = f.Seek(0, io.SeekStart)
 	if err != nil {
 		fmt.Printf("Could not reset pointer to the beginning of the video file:%v", err)
@@ -72,7 +86,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	}
 	key := make([]byte, 32)
 	rand.Read(key)
-	key_ := fmt.Sprintf("%v.mp4", key)
+	key_ := fmt.Sprintf("%v/%v.mp4", prefix, key)
 	put_object_params := s3.PutObjectInput{
 		Bucket:      &cfg.s3Bucket,
 		Key:         &key_,
