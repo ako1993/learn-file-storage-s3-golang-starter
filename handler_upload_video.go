@@ -84,13 +84,23 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		fmt.Printf("Could not reset pointer to the beginning of the video file:%v", err)
 		return
 	}
+	output_video_file, err := processVideoForFastStart(f.Name())
+	if err != nil {
+		fmt.Printf("COULD NOT PROCESS VIDEO FOR FAST START:%v", err)
+		return
+	}
+	body, err := os.Open(output_video_file)
+	if err != nil {
+		fmt.Printf("COULD NOT OPEN OUTPUT VIDEO FILE")
+		return
+	}
 	key := make([]byte, 32)
 	rand.Read(key)
 	key_ := fmt.Sprintf("%v/%v.mp4", prefix, key)
 	put_object_params := s3.PutObjectInput{
 		Bucket:      &cfg.s3Bucket,
 		Key:         &key_,
-		Body:        f,
+		Body:        body,
 		ContentType: &media_type,
 	}
 	_, err = cfg.s3Client.PutObject(r.Context(), &put_object_params)
