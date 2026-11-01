@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"mime"
@@ -96,7 +97,9 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	}
 	key := make([]byte, 32)
 	rand.Read(key)
-	key_ := fmt.Sprintf("%v/%v.mp4", prefix, key)
+	hex_string := hex.EncodeToString(key)
+	key_ := fmt.Sprintf("%v/%v.mp4", prefix, hex_string)
+	updated_vid_url := fmt.Sprintf("%v,%v", cfg.s3Bucket, key_)
 	put_object_params := s3.PutObjectInput{
 		Bucket:      &cfg.s3Bucket,
 		Key:         &key_,
@@ -104,11 +107,21 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		ContentType: &media_type,
 	}
 	_, err = cfg.s3Client.PutObject(r.Context(), &put_object_params)
+	fmt.Printf("BUCKET TRYING TO BE ACCESSED:%v\n", &put_object_params.Bucket)
 	if err != nil {
 		fmt.Printf("Could not execute put object s3 function:%v", err)
 		return
 	}
-	updated_vid_url := fmt.Sprintf("https://%v.s3.%v.amazonaws.com/%v", cfg.s3Bucket, cfg.s3Region, key_)
 	video.VideoURL = &updated_vid_url
-	cfg.db.UpdateVideo(video)
+	err = cfg.db.UpdateVideo(video)
+	if err != nil {
+		fmt.Printf("COULD NOT UPDATE VIDEO IN DB:%v", err)
+		return
+	}
+	video, err = cfg.dbVideoToSignedVideo(video)
+	if err != nil {
+		fmt.Printf("COULD NOT CONVERT VIDEO TO SIGNED VIDEO:%v", err)
+		return
+	}
+	respondWithJSON(w, 200, video)
 }

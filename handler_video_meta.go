@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/auth"
@@ -94,6 +95,21 @@ func (cfg *apiConfig) handlerVideoGet(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusNotFound, "Couldn't get video", err)
 		return
 	}
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Couldn't find JWT", err)
+		return
+	}
+	user_id, err := auth.ValidateJWT(token, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Could not authenticate user", err)
+		return
+	}
+	if user_id != video.UserID {
+		fmt.Printf("USER IS NOT AN OWNER OF THE REQUESTED VIDEO")
+		return
+	}
+	cfg.dbVideoToSignedVideo(video)
 
 	respondWithJSON(w, http.StatusOK, video)
 }
@@ -115,6 +131,12 @@ func (cfg *apiConfig) handlerVideosRetrieve(w http.ResponseWriter, r *http.Reque
 		respondWithError(w, http.StatusInternalServerError, "Couldn't retrieve videos", err)
 		return
 	}
-
+	for i := range videos {
+		videos[i], err = cfg.dbVideoToSignedVideo(videos[i])
+		if err != nil {
+			fmt.Printf("COULD NOT PRESIGN RETRIEVED VIDEO:%v", err)
+			return
+		}
+	}
 	respondWithJSON(w, http.StatusOK, videos)
 }
