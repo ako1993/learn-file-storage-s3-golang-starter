@@ -109,7 +109,6 @@ func (cfg *apiConfig) handlerVideoGet(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("USER IS NOT AN OWNER OF THE REQUESTED VIDEO")
 		return
 	}
-	cfg.dbVideoToSignedVideo(video)
 
 	respondWithJSON(w, http.StatusOK, video)
 }
@@ -131,12 +130,6 @@ func (cfg *apiConfig) handlerVideosRetrieve(w http.ResponseWriter, r *http.Reque
 		respondWithError(w, http.StatusInternalServerError, "Couldn't retrieve videos", err)
 		return
 	}
-	for i := range videos {
-		videos[i], err = cfg.dbVideoToSignedVideo(videos[i])
-		if err != nil {
-			fmt.Printf("COULD NOT PRESIGN RETRIEVED VIDEO:%v", err)
-			return
-		}
-	}
+
 	respondWithJSON(w, http.StatusOK, videos)
 }

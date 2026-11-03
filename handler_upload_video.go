@@ -99,7 +99,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	rand.Read(key)
 	hex_string := hex.EncodeToString(key)
 	key_ := fmt.Sprintf("%v/%v.mp4", prefix, hex_string)
-	updated_vid_url := fmt.Sprintf("%v,%v", cfg.s3Bucket, key_)
+	updated_vid_url := fmt.Sprintf("%v/%v", cfg.s3CfDistribution, key_)
 	put_object_params := s3.PutObjectInput{
 		Bucket:      &cfg.s3Bucket,
 		Key:         &key_,
@@ -113,15 +113,12 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	video.VideoURL = &updated_vid_url
+	fmt.Printf("UPDATED URL:%v", video.VideoURL)
 	err = cfg.db.UpdateVideo(video)
 	if err != nil {
 		fmt.Printf("COULD NOT UPDATE VIDEO IN DB:%v", err)
 		return
 	}
-	video, err = cfg.dbVideoToSignedVideo(video)
-	if err != nil {
-		fmt.Printf("COULD NOT CONVERT VIDEO TO SIGNED VIDEO:%v", err)
-		return
-	}
+
 	respondWithJSON(w, 200, video)
 }
